@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Standup Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #teamList {
+            margin-top: 20px;
+        }
+        .responsible {
+            font-weight: bold;
+            color: green;
+        }
+        .arrow {
+            font-size: 24px;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Daily Standup Tracker</h1>
+    <div>
+        <label for="teamInput">Enter team members (comma-separated):</label>
+        <input type="text" id="teamInput" placeholder="e.g., Alice, Bob, Carol">
+        <button onclick="initializeTeam()">Set Team</button>
+    </div>
+    <div id="teamList"></div>
+    <button onclick="nextTurn()">Next Turn</button>
+    <button onclick="skipTurn()">Skip Turn</button>
+
+    <script>
+        let team = [];
+        let currentIndex = 0;
+        let lastDate = null;
+
+        function initializeTeam() {
+            const input = document.getElementById("teamInput").value;
+            team = input.split(',').map(name => ({ name: name.trim(), date: null })).filter(member => member.name);
+            currentIndex = 0;
+            lastDate = null;
+
+            saveState();
+            displayTeam();
+        }
+
+        function saveState() {
+            localStorage.setItem('team', JSON.stringify(team));
+            localStorage.setItem('currentIndex', currentIndex);
+            localStorage.setItem('lastDate', lastDate);
+        }
+
+        function loadState() {
+            const savedTeam = localStorage.getItem('team');
+            const savedIndex = localStorage.getItem('currentIndex');
+            const savedDate = localStorage.getItem('lastDate');
+            
+            if (savedTeam) {
+                team = JSON.parse(savedTeam);
+                currentIndex = parseInt(savedIndex, 10) || 0;
+                lastDate = savedDate ? new Date(savedDate) : null;
+                displayTeam();
+            }
+        }
+
+        function displayTeam() {
+            const teamListDiv = document.getElementById("teamList");
+            teamListDiv.innerHTML = '';
+
+            team.forEach((member, index) => {
+                const memberDiv = document.createElement("div");
+                const displayDate = member.date ? ` - ${member.date}` : '';
+                memberDiv.textContent = member.name + displayDate;
+
+                if (index === currentIndex) {
+                    memberDiv.classList.add('responsible');
+                    memberDiv.innerHTML = `<span class="arrow">→</span> ${member.name}${displayDate}`;
+                }
+                
+                teamListDiv.appendChild(memberDiv);
+            });
+        }
+
+        function nextTurn() {
+            updateFacilitationDate();
+            currentIndex = (currentIndex + 1) % team.length;
+            saveState();
+            displayTeam();
+        }
+
+        function skipTurn() {
+            const skippedPerson = team.splice(currentIndex, 1)[0];
+            currentIndex = currentIndex % team.length; // Move to the next person
+            team.splice(currentIndex + 1, 0, skippedPerson); // Insert skipped person after the new current person
+            saveState();
+            displayTeam();
+        }
+
+        function updateFacilitationDate() {
+            if (!lastDate) {
+                // Use current date for the very first "next turn" click
+                lastDate = new Date();
+            } else {
+                // Increment the date by 1 day for each subsequent "next turn"
+                lastDate.setDate(lastDate.getDate() + 1);
+            }
+            team[currentIndex].date = lastDate.toLocaleDateString();
+        }
+
+        loadState();
+    </script>
+</body>
+</html>
